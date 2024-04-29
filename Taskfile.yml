@@ -28,6 +28,14 @@ tasks:
     cmds:
       - mkdir -p ca
 
+  ck_ca_generated:
+    internal: true
+    silent: true
+    desc: "Checks if root Certificate Authorirty generated"
+    preconditions:
+      - sh: test -f ca/ca.crt
+        msg: "Certificate authority materials must be generated before running this task. Hint: `task genca`"
+
   # Meat and Potatoes (yum!)
 
   default:
@@ -52,6 +60,39 @@ tasks:
       - echo ">>>>> Root CA Private key - ca/ca/ca.key"
       - echo ">>>>> Root CA Public key - ca/ca/ca.crt"
 
+  gencert:
+    desc: "Generates a private key and a Certificate Signing Requestg (CSR) for the Common Name passed as a parameter via `task gencert -- <CommonName>` "
+    deps: [
+      ck_openssl,
+      ck_configured,
+      ck_ca_generated
+    ]
+    silent: true
+    vars:
+      CN: "{{- .CLI_ARGS -}}"
+      SUBJECT: "/CN={{- .CLI_ARGS -}}"
+    preconditions:
+      - sh: test ! -z "{{.SUBJECT}}"
+        msg: "This task requires parameters. Hint: `task gencert -- <CommonName>`"
+    cmds:
+      - mkdir -p ca/{{.CN}}
+      - openssl genrsa -out ca/{{.CN}}/private.key 4096
+      - echo ---------- Generating Certificate Signing Request for {{.CN}} ----------
+      - openssl req -new -key ca/{{.CN}}/private.key -sha256 -out ca/{{.CN}}/private.csr -subj {{.SUBJECT}}
+      - echo ---------- Signing {{.CN}} using $clusterName$clusterVersion CA ----------
+      - openssl x509 -req -in ca/{{.CN}}/private.csr -CA ca/ca.crt -CAkey ca/ca.key -CAcreateserial -days 730 -sha256 -out ca/{{.CN}}/public.crt
+      - echo ---------- CERT DETAILS ----------
+      - openssl x509 -in ca/{{.CN}}/public.crt -noout -text
+      - echo
+      - echo ---------- SUMMARY ----------
+      - echo
+      - echo ">>>>> Root CA Private key - ca/ca.key"
+      - echo ">>>>> Root CA Public key / Certificate - ca/ca.crt"
+      - echo ">>>>> Certificate Common Name - {{.CN}}"
+      - echo ">>>>> Certificate Subject - {{.SUBJECT}}"
+      - echo ">>>>> Subject Private Key - ca/{{.CN}}/private.key"
+      - echo ">>>>> Subject Public Key / Certificate - ca/{{.CN}}/public.crt"
+
   obliterate:
     silent: true
     desc: Cleans up the workspace for generating a new hierarchy.
@@ -66,8 +107,3 @@ tasks:
     dir: ca/
     cmds:
       - rm -rf ca/
-
-
-
-
-

@@ -79,7 +79,7 @@ tasks:
       - openssl genrsa -out ca/{{.CN}}/private.key 4096
       - echo ---------- Generating Certificate Signing Request for {{.CN}} ----------
       - openssl req -new -key ca/{{.CN}}/private.key -sha256 -out ca/{{.CN}}/private.csr -subj {{.SUBJECT}}
-      - echo ---------- Signing {{.CN}} using $clusterName$clusterVersion CA ----------
+      - echo ---------- Signing {{.CN}} using CA ----------
       - openssl x509 -req -in ca/{{.CN}}/private.csr -CA ca/ca.crt -CAkey ca/ca.key -CAcreateserial -days 730 -sha256 -out ca/{{.CN}}/public.crt
       - echo ---------- CERT DETAILS ----------
       - openssl x509 -in ca/{{.CN}}/public.crt -noout -text
@@ -92,6 +92,34 @@ tasks:
       - echo ">>>>> Certificate Subject - {{.SUBJECT}}"
       - echo ">>>>> Subject Private Key - ca/{{.CN}}/private.key"
       - echo ">>>>> Subject Public Key / Certificate - ca/{{.CN}}/public.crt"
+
+  signcsr:
+    desc: "Signs a CSR file supplied as a parameter against this certificate authority."
+    deps: [
+      ck_openssl,
+      ck_configured,
+      ck_ca_generated
+    ]
+    silent: true
+    interactive: true
+    vars:
+      CSR: "{{- .CLI_ARGS -}}"
+      FILENAME: "ca/signed.crt"
+    preconditions:
+      - sh: test -f {{.CLI_ARGS}}
+        msg: "Specified CSR file does not exist on this filesystem"
+    cmds:
+      - echo "---------- Summary of CSR ----------"
+      - echo "Subject >>>>> $(openssl req -noout -in {{.CLI_ARGS}} -subject)"
+      - echo "---------- Signing CSR using CA"
+      - export FILENAME=ca/$(tr -dc A-Za-z0-9 </dev/urandom | head -c 6; echo).crt
+      - openssl x509 -req -in {{.CSR}} -CA ca/ca.crt -CAkey ca/ca.key -CAcreateserial -days 730 -sha256 -out {{.FILENAME}}
+      - echo
+      - echo "---------- PASTABLE CERTIFICATE OUTPUT ----------"
+      - cat {{.FILENAME}}
+      - echo "---------- SUMMARY ----------"
+      - echo "Signed Public Key / Certificate >>>>> {{.FILENAME}}"
+
 
   obliterate:
     silent: true

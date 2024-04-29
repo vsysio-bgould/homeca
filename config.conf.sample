@@ -1,0 +1,11 @@
+[ca_req_distinguished_name]
+# Country (ie. Canada)
+C                       = CA
+# State (ie. Ontario)
+ST                      = Ontario
+# City (ie. Windsor)
+L                       = Windsor
+# Common Name (ie. Widgets Inc. Cert Authority)
+CN                      = ExampleGuy's Awesome Home Lab Network
+# Organization Name (ie. Widgets, Inc.)
+0.organizationName      = ExampleComp, Inc.

@@ -1,0 +1,73 @@
+version: '3'
+
+tasks:
+  # Checks
+
+  ck_openssl:
+    internal: true
+    silent: true
+    desc: Checks if openssl is installed and that the version is 3 or higher
+    preconditions:
+      - sh: command -v openssl
+        msg: "Openssl not installed OR not available in PATH."
+      - msg: "OpenSSL not version 3.0.0 or higher"
+        sh: |
+          VERSION=$(openssl version | awk '{ print $2 }')
+          MAJOR_VERSION=$(echo $VERSION | awk -F $'.' '{ print $1 }')
+          if [ $MAJOR_VERSION -lt 3 ]; then
+            exit 1
+          fi
+
+  ck_configured:
+    internal: true
+    silent: true
+    desc: Checks if config.conf file exists (templated from config.conf.sample). Also checks to ensure necessary dirs exist.
+    preconditions:
+      - sh: test -f config.conf
+        msg: "config.conf file not populated. Did you copy config.conf.sample to config.conf?"
+    cmds:
+      - mkdir -p ca
+
+  # Meat and Potatoes (yum!)
+
+  default:
+    silent: true
+    cmds:
+      - task --list
+
+  genca:
+    desc: "Generates root certificate authority, writing these materials to `ca/ca/` directory"
+    deps: [
+      ck_openssl,
+      ck_configured
+    ]
+    silent: true
+    cmds:
+      - echo ---------- Generating Root CA private key ----------
+      - openssl genrsa -out ca/ca.key 4096
+      - echo ---------- Signing Root CA public key ----------
+      - openssl req -x509 -new -sha512 -key ca/ca.key -days 3650 -config ca.conf -out ca/ca.crt
+      - echo ---------- SUMMARY ----------
+      - echo
+      - echo ">>>>> Root CA Private key - ca/ca/ca.key"
+      - echo ">>>>> Root CA Public key - ca/ca/ca.crt"
+
+  obliterate:
+    silent: true
+    desc: Cleans up the workspace for generating a new hierarchy.
+    prompt: |
+      !! WARNING !!
+      THIS IS A DESTRUCTIVE OPERATION that will destroy the certificate hierarchy written into this workspace.
+      If you haven't backed up the contents of the ca/ folder, this will obliterate any chance of
+      generating new certificates.
+      In other words...
+      Bad stuff will happen. ESPECIALLY IF YOU IGNORE THIS MSG.
+      !! WARNING !!
+    dir: ca/
+    cmds:
+      - rm -rf ca/
+
+
+
+
+

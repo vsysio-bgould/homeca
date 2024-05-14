@@ -131,9 +131,9 @@ tasks:
       CN: "{{- .CLI_ARGS -}}"
     preconditions:
       - sh: test ! -z "{{- .CLI_ARGS -}}"
-        msg: "This task takes a certificate common name as a parameter. Output materials are written a subdirectory so this common name cannot have whitespaces. Hint: `task ca:genint -- my-cool-intermediate-ca`"
+        msg: "This task takes a certificate common name as a parameter. Output materials are written a subdirectory so this common name cannot have whitespaces. Hint: `task genint -- my-cool-intermediate-ca`"
       - sh: test -z {{(split " " .CLI_ARGS)._1}}
-        msg: "Output materials are written a subdirectory so this common name cannot have whitespaces. Hint: `task ca:genint -- my-cool-intermediate-ca`"
+        msg: "Output materials are written a subdirectory so this common name cannot have whitespaces. Hint: `task genint -- my-cool-intermediate-ca`"
       - sh: test ! -f ca/{{.CN}}/ca.key
         msg: "Looks like materials are already generate for this common name. Check contents of $PWD/ca/{{.CN}}/"
     silent: true

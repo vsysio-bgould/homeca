@@ -120,6 +120,37 @@ tasks:
       - echo "---------- SUMMARY ----------"
       - echo "Signed Public Key / Certificate >>>>> {{.FILENAME}}"
 
+  genint:
+    desc: "Generate and sign intermediate CA materials from the root CA. Specify details in `config.conf`."
+    deps: [
+      ck_openssl,
+      ck_configured,
+      ck_ca_generated
+    ]
+    vars:
+      CN: "{{- .CLI_ARGS -}}"
+    preconditions:
+      - sh: test ! -z "{{- .CLI_ARGS -}}"
+        msg: "This task takes a certificate common name as a parameter. Output materials are written a subdirectory so this common name cannot have whitespaces. Hint: `task ca:genint -- my-cool-intermediate-ca`"
+      - sh: test -z {{(split " " .CLI_ARGS)._1}}
+        msg: "Output materials are written a subdirectory so this common name cannot have whitespaces. Hint: `task ca:genint -- my-cool-intermediate-ca`"
+      - sh: test ! -f ca/{{.CN}}/ca.key
+        msg: "Looks like materials are already generate for this common name. Check contents of $PWD/ca/{{.CN}}/"
+    silent: true
+    cmds:
+      - echo "---------- Generating private key material for {{.CN}} ----------"
+      - mkdir -p ca/{{.CN}}/
+      - openssl genrsa -out ca/{{.CN}}/ca.key 4096
+      - echo
+      - echo "---------- Generate Certificate / Public key material ----------"
+      - INT_COMMON_NAME="{{.CN}}" openssl req -x509 -new -key ca/{{.CN}}/ca.key -sha256 -out ca/{{.CN}}/ca.crt -config intca.conf -extensions intca_x509_extensions
+      - echo
+      - echo "---------- SUMMARY ----------"
+      - echo "Intermediate CA Path - $PWD/ca/{{.CN}}/"
+      - echo "Intermediate CA Private Key - $PWD/ca/{{.CN}}/ca.key"
+      - echo "Intermediate CA CSR - $PWD/ca/{{.CN}}/ca.csr"
+      - echo "Intermediate CA Certificate / Public Key - $PWD/ca/{{.CN}}/ca.crt"
+
 
   obliterate:
     silent: true

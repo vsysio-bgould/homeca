@@ -70,7 +70,7 @@ tasks:
     silent: true
     vars:
       CN: "{{- .CLI_ARGS -}}"
-      SUBJECT: "/CN={{- .CLI_ARGS -}}"
+      SUBJECT: "/CN={{- .CLI_ARGS -}}/C=CA/O=homeca/ST=Ontario/L=Windsor/subjectAltName={{- .CLI_ARGS -}}"
     preconditions:
       - sh: test ! -z "{{.SUBJECT}}"
         msg: "This task requires parameters. Hint: `task gencert -- <CommonName>`"
@@ -80,7 +80,7 @@ tasks:
       - echo ---------- Generating Certificate Signing Request for {{.CN}} ----------
       - openssl req -new -key ca/{{.CN}}/private.key -sha256 -out ca/{{.CN}}/private.csr -subj {{.SUBJECT}}
       - echo ---------- Signing {{.CN}} using CA ----------
-      - openssl x509 -req -in ca/{{.CN}}/private.csr -CA ca/ca.crt -CAkey ca/ca.key -CAcreateserial -days 730 -sha256 -out ca/{{.CN}}/public.crt
+      - FQDN="{{.CN}}" openssl x509 -req -in ca/{{.CN}}/private.csr -CA ca/ca.crt -CAkey ca/ca.key -CAcreateserial -days 730 -sha256 -out ca/{{.CN}}/public.crt -extfile endpoint.ext
       - echo ---------- CERT DETAILS ----------
       - openssl x509 -in ca/{{.CN}}/public.crt -noout -text
       - echo
